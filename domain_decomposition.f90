@@ -27,8 +27,8 @@ contains
       this%id = id
       this%x = x
       this%y = y
-      this%to_walk_x = 0
-      this%to_walk_y = 0
+      this%step_x = 0
+      this%step_y = 0
    end subroutine
 
    subroutine set_step(this, step_x, step_y)
