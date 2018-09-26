@@ -141,14 +141,14 @@ program domain_decomposition
          ! Add walkers to the exchange arrays.
          if (walkers(i)%x < 0) then
             walkers(i)%x = walkers(i)%x + subdomain_x
-            walker_exchange(num_exchanged) = walkers(i)
             num_exchanged = num_exchanged + 1
-            walkers(i)%id = 0                                  ! id = 0 are set for deletion
+            walker_exchange(num_exchanged) = walkers(i)
+            walkers(i)%id = -1                                  ! id = 0 are set for deletion
          else if (walkers(i)%x > subdomain_x) then
             walkers(i)%x = walkers(i)%x - subdomain_x
-            walker_exchange(num_exchanged) = walkers(i)
             num_exchanged = num_exchanged + 1
-            walkers(i)%id = 0
+            walker_exchange(num_exchanged) = walkers(i)
+            walkers(i)%id = -1
          end if
       end do
       ! call MPI_Barrier(MPI_COMM_WORLD, ierr)
