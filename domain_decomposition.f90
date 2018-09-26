@@ -65,9 +65,9 @@ program domain_decomposition
    integer, parameter   :: domain_y = 800
    integer, parameter   :: total_num_walkers = 10000
    integer, parameter   :: nCycles = 100000                    ! Number of cycles
-   integer, parameter   :: MAX_STEP = 50
-   integer, parameter   :: MAX_EXCHANGE = 1000                 ! Size of exchange vector
-   type(Walker)         :: walkers(num_walkers)
+   integer, parameter   :: MAX_STEP = 20
+   integer, parameter   :: MAX_EXCHANGE = 5000                 ! Size of exchange vector
+   type(Walker)         :: walkers(total_num_walkers)
 
    ! Runtime variables for decomposition
    integer              :: world_size, world_rank
@@ -77,8 +77,11 @@ program domain_decomposition
    integer              :: num_exchanged
    integer              :: num_deleted
    type(Walker)         :: walker_exchange(MAX_EXCHANGE)
-   type(Walker)         :: receive_walkers(MAX_EXCHANGE)
-   integer              :: size_exchange
+   type(Walker)         :: received_walkers(MAX_EXCHANGE)
+   integer              :: size
+   integer              :: size_incoming
+   integer              :: status(MPI_STATUS_SIZE)
+   integer              :: numbers(2), incomings(2)
 
    ! Common variables
    integer              :: ierr, i, icycle
@@ -150,20 +153,38 @@ program domain_decomposition
       num_walkers = num_walkers - num_exchanged
 
       ! Exchange walkers
-      size_exchange = SIZEOF(walker_exchange)
+      size = SIZEOF(walkers(1))
       if (world_rank == 0) then
-         call MPI_Send(walker_exchange, size_exchange, MPI_BYTE, 1, 0, MPI_COMM_WORLD, ierr)
+         call MPI_Send(walker_exchange, num_exchanged * size, MPI_BYTE, 1, 0, MPI_COMM_WORLD, ierr)
 
-         call MPI_Recv(receive_walkers, size_exchange, MPI_BYTE, 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE, ierr)
+         call MPI_Recv(received_walkers, MAX_EXCHANGE * size, MPI_BYTE, 1, 0, MPI_COMM_WORLD, status, ierr)
+         size_incoming = status(1) / size
       end if
       if (world_rank == 1) then
-         call MPI_Recv(receive_walkers, size_exchange, MPI_BYTE, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE, ierr)
+         call MPI_Recv(received_walkers, MAX_EXCHANGE * size, MPI_BYTE, 0, 0, MPI_COMM_WORLD, status, ierr)
 
-         call MPI_Send(walker_exchange, size_exchange, MPI_BYTE, 0, 0, MPI_COMM_WORLD, ierr)
+         call MPI_Send(walker_exchange, num_exchanged * size, MPI_BYTE, 0, 0, MPI_COMM_WORLD, ierr)
+         size_incoming = status(1) / size
       end if
 
-      ! Append received walkers
-      do i = 1, 
+      ! Update walker position and append received walkers
+      do i = 1, size_incoming
+         if (received_walkers(i)%x < 1) then
+            received_walkers(i)%x = received_walkers(i)%x + subdomain_x
+         end if
+         if (received_walkers(i)%x > subdomain_x) then
+            received_walkers(i)%x = received_walkers(i)%x - subdomain_x
+         end if
+         walkers(num_walkers + size_incoming) = received_walkers(i)
+      end do
 
+      call MPI_Barrier(MPI_COMM_WORLD, ierr)
+      call MPI_Gather(num_walkers, 1, MPI_INTEGER, numbers, 1, MPI_INTEGER, 0, MPI_COMM_WORLD,ierr)
+      call MPI_Gather(size_incoming, 1, MPI_INTEGER, incomings, 1, MPI_INTEGER, 0, MPI_COMM_WORLD,ierr)
+      if (world_rank == 0) then
+         print *,"Number of walkers per domain:", numbers, "Total = ", SUM(numbers)
+         print *,"Incoming in each domain:", incomings
+      end if
    end do
+   call MPI_Finalize(ierr)
 end program
