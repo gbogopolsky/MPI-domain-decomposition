@@ -112,7 +112,7 @@ program domain_decomposition
    num_walkers = total_num_walkers / 2                         ! Initial value
 
    ! Initializing total_num_walkers / 2 walkers in each domain
-   call RANDOM_SEED()
+   if (world_rank == 1) call RANDOM_SEED()
    do i = 1, num_walkers
       call RANDOM_NUMBER(rands)
       call walkers(i)%initialize(i, NINT(rands(1) * subdomain_x), NINT(rands(2) * subdomain_y))
