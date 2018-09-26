@@ -71,9 +71,9 @@ program domain_decomposition
    ! Global parameters
    integer, parameter   :: domain_x = 20
    integer, parameter   :: domain_y = 50
-   integer, parameter   :: total_num_walkers = 100
-   integer, parameter   :: nCycles = 1                   ! Number of cycles
-   integer, parameter   :: MAX_STEP = 5
+   integer, parameter   :: total_num_walkers = 3
+   integer, parameter   :: nCycles = 100                   ! Number of cycles
+   integer, parameter   :: MAX_STEP = 1
    integer, parameter   :: MAX_EXCHANGE = 50                 ! Size of exchange vector
    type(Walker)         :: walkers(total_num_walkers)
 
@@ -114,6 +114,7 @@ program domain_decomposition
    subdomain_x = domain_x / 2
    subdomain_y = domain_y
    num_walkers = total_num_walkers / 2                         ! Initial value
+   if (world_rank == 0) num_walkers = num_walkers + MOD(total_num_walkers, 2)
 
    ! Initializing total_num_walkers / 2 walkers in each domain
    if (world_rank == 1) call RANDOM_SEED()
