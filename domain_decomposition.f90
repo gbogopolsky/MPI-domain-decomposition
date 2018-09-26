@@ -120,7 +120,7 @@ program domain_decomposition
    do i = 1, num_walkers
       call RANDOM_NUMBER(rands)
       id = i + num_walkers * world_rank
-      call walkers(i)%initialize(id, NINT(rands(1) * subdomain_x), NINT(rands(2) * subdomain_y))
+      call walkers(i)%initialize(id, INT(rands(1) * subdomain_x) + 1, INT(rands(2) * subdomain_y) + 1)
    end do
 
    ! Start cycle
@@ -139,11 +139,11 @@ program domain_decomposition
       do i = 1, num_walkers
          if (walkers(i)%y > subdomain_y) then
             walkers(i)%y = walkers(i)%y - subdomain_y
-         else if (walkers(i)%y < 0) then
+         else if (walkers(i)%y < 1) then
             walkers(i)%y = walkers(i)%y + subdomain_y
          end if
          ! Add walkers to the exchange arrays.
-         if (walkers(i)%x < 0) then
+         if (walkers(i)%x < 1) then
             walkers(i)%x = walkers(i)%x + subdomain_x
             num_exchanged = num_exchanged + 1
             walker_exchange(num_exchanged) = walkers(i)
@@ -252,10 +252,37 @@ program domain_decomposition
          print *,"Incoming in each domain:", incomings
       end if
 
-      allocate(walkersOnSubdomain(0:subdomain_x, 0:subdomain_y))
+      allocate(walkersOnSubdomain(subdomain_x, subdomain_y))
       do i = 1, num_walkers
          walkersOnSubdomain(walkers(i)%y, walkers(i)%x) = walkersOnSubdomain(walkers(i)%y, walkers(i)%x) + 1
       end do
+      ! if (world_rank == 1) then
+      !    call MPI_Send(walkersOnSubdomain, subdomain_x * subdomain_y * 4, MPI_BYTE, 0, 0, MPI_COMM_WORLD, ierr)
+      ! end if
+      if (world_rank == 0) then
+         do j = 1, subdomain_x
+            do i = 1, subdomain_y
+               walkersOnDomain(i,j) = walkersOnSubdomain(i,j)
+            end do
+         end do
+         print *
+         ! call MPI_Recv(walkersOnSubdomain, subdomain_x * subdomain_y * 4, MPI_BYTE, 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE, ierr)
+         ! do j = 1, subdomain_x
+         !    do i = 1, subdomain_y
+         !       walkersOnDomain(domain_y + i,j) = walkersOnSubdomain(i,j)
+         !    end do
+         ! end do
+         call MPI_Gather(walkersOnSubdomain, subdomain_x * subdomain_y * 4, MPI_BYTE, walkersOnDomain, domain_x * domain_y * 4)
+         print *, walkersOnDomain
+         if (MOD(icycle,10) == 0) then
+            open(200, file='movie/position.res', status='unknown', position='append')
+               do i = 1, domain_y
+                  write(200, 101) (walkersOnDomain(i,j), j = 1, domain_x)
+               end do
+            close(200)
+         end if 
+      end if
+101 format (501(2x,I5))
       deallocate(walkersOnSubdomain)
    end do
    call MPI_Finalize(ierr)
