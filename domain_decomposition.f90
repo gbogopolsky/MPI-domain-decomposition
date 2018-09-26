@@ -133,26 +133,21 @@ program domain_decomposition
       do i = 1, num_walkers
          if (walkers(i)%y > subdomain_y) then
             walkers(i)%y = walkers(i)%y - subdomain_y
-         end if
-         if (walkers(i)%y < 0) then
+         else if (walkers(i)%y < 0) then
             walkers(i)%y = walkers(i)%y + subdomain_y
          end if
          ! Add walkers to the exchange arrays.
-         if (world_rank == 0) then
-            num_exchanged = 0
-            if (walkers(i)%x < 0 .OR. walkers(i)%x > subdomain_x) then
-               walker_exchange(num_exchanged) = walkers(i)
-               num_exchanged = num_exchanged + 1
-               walkers(i)%id = 0                               ! id = 0 are set for deletion
-            end if
-         end if
-         if (world_rank == 1) then
-            num_exchanged = 0
-            if (walkers(i)%x < 0 .OR. walkers(i)%x > subdomain_x) then
-               walker_exchange(num_exchanged) = walkers(i)
-               num_exchanged = num_exchanged + 1
-               walkers(i)%id = 0
-            end if
+         num_exchanged = 0
+         if (walkers(i)%x < 0) then
+            walkers(i)%x = walkers(i)%x + subdomain_x
+            walker_exchange(num_exchanged) = walkers(i)
+            num_exchanged = num_exchanged + 1
+            walkers(i)%id = 0                                  ! id = 0 are set for deletion
+         else if (walkers(i)%x > subdomain_x) then
+            walkers(i)%x = walkers(i)%x - subdomain_x
+            walker_exchange(num_exchanged) = walkers(i)
+            num_exchanged = num_exchanged + 1
+            walkers(i)%id = 0
          end if
       end do
       call MPI_Barrier(MPI_COMM_WORLD, ierr)
@@ -182,14 +177,8 @@ program domain_decomposition
          size_incoming = status(1) / size
       end if
 
-      ! Update walker position and append received walkers
+      ! Append received walkers
       do i = 1, size_incoming
-         if (received_walkers(i)%x < 1) then
-            received_walkers(i)%x = received_walkers(i)%x + subdomain_x
-         end if
-         if (received_walkers(i)%x > subdomain_x) then
-            received_walkers(i)%x = received_walkers(i)%x - subdomain_x
-         end if
          walkers(num_walkers + size_incoming) = received_walkers(i)
       end do
 
