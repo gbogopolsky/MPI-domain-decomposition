@@ -72,7 +72,7 @@ program domain_decomposition
    integer, parameter   :: domain_x = 500
    integer, parameter   :: domain_y = 800
    integer, parameter   :: total_num_walkers = 10000
-   integer, parameter   :: nCycles = 100000                    ! Number of cycles
+   integer, parameter   :: nCycles = 20                   ! Number of cycles
    integer, parameter   :: MAX_STEP = 50
    integer, parameter   :: MAX_EXCHANGE = 5000                 ! Size of exchange vector
    type(Walker)         :: walkers(total_num_walkers)
@@ -92,7 +92,7 @@ program domain_decomposition
    integer              :: numbers(2), incomings(2), exchanged(2)
 
    ! Common variables
-   integer              :: ierr, i, icycle
+   integer              :: ierr, i, icycle, ip
    real, dimension(2)   :: rands
 
    call MPI_Init(ierr)
@@ -150,22 +150,25 @@ program domain_decomposition
             walkers(i)%id = 0
          end if
       end do
-      call MPI_Barrier(MPI_COMM_WORLD, ierr)
-      call MPI_Gather(num_exchanged, 1, MPI_INTEGER, exchanged, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
-      if (world_rank == 0) then
-         print *,"Exchanged walkers:", exchanged
-      end if
+      ! call MPI_Barrier(MPI_COMM_WORLD, ierr)
+      ! call MPI_Gather(num_exchanged, 1, MPI_INTEGER, exchanged, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
+      ! if (world_rank == 0) then
+      !    print *,"Exchanged walkers:", exchanged
+      ! end if
 
       ! Delete outgoing walkers and redorder walkers array
+      ip = 0
       do i = 1, num_walkers
-         if (walkers(i)%id == 0) then
-            walkers(i) = walkers(i+1)
+         if (walkers(i)%id /= 0) then
+            ip = ip + 1
+            walkers(ip) = walkers(i)
          end if
       end do
       num_walkers = num_walkers - num_exchanged
 
       ! Exchange walkers
       size = SIZEOF(walkers(1))
+      print *, "size", size
       if (world_rank == 0) then
          call MPI_Send(walker_exchange, num_exchanged * size, MPI_BYTE, 1, 0, MPI_COMM_WORLD, ierr)
 
