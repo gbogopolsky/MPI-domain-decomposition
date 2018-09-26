@@ -72,7 +72,7 @@ program domain_decomposition
    integer, parameter   :: domain_x = 500
    integer, parameter   :: domain_y = 800
    integer, parameter   :: total_num_walkers = 10000
-   integer, parameter   :: nCycles = 20                   ! Number of cycles
+   integer, parameter   :: nCycles = 2000                   ! Number of cycles
    integer, parameter   :: MAX_STEP = 50
    integer, parameter   :: MAX_EXCHANGE = 5000                 ! Size of exchange vector
    type(Walker)         :: walkers(total_num_walkers)
@@ -158,6 +158,14 @@ program domain_decomposition
       ! end if
 
       ! Delete outgoing walkers and redorder walkers array
+      ! if (world_rank == 1) then
+      !    print *, num_walkers
+      !    do i = 1, num_walkers
+      !       call walkers(i)%print
+      !    end do
+      !    print *
+      !    print *
+      ! end if
       ip = 0
       num_walkers = num_walkers - num_exchanged
       do i = 1, num_walkers
@@ -166,6 +174,22 @@ program domain_decomposition
          end do
          walkers(i) = walkers(i + ip)
       end do
+      ! if (world_rank == 1) then
+      !    print *, num_walkers
+      !    do i = 1, num_walkers
+      !       call walkers(i)%print
+      !    end do
+      !    print *
+      !    print *
+      ! end if
+      ! if (world_rank == 1) then
+      !    print *, num_exchanged
+      !    do i = 1, num_exchanged
+      !       call walker_exchange(i)%print
+      !    end do
+      !    print *
+      !    print *
+      ! end if
 
       ! Exchange walkers
       size = SIZEOF(walkers(1))
@@ -174,18 +198,47 @@ program domain_decomposition
 
          call MPI_Recv(received_walkers, MAX_EXCHANGE * size, MPI_BYTE, 1, 0, MPI_COMM_WORLD, status, ierr)
          num_incoming = status(1) / size
+         ! print *, num_incoming
+         ! do i = 1, num_incoming
+         !    call received_walkers(i)%print
+         ! end do
+         ! print *
+         ! print *
       end if
       if (world_rank == 1) then
          call MPI_Recv(received_walkers, MAX_EXCHANGE * size, MPI_BYTE, 0, 0, MPI_COMM_WORLD, status, ierr)
 
          call MPI_Send(walker_exchange, num_exchanged * size, MPI_BYTE, 0, 0, MPI_COMM_WORLD, ierr)
          num_incoming = status(1) / size
+         ! print *, num_incoming
+         ! do i = 1, num_incoming
+         !    call received_walkers(i)%print
+         ! end do
+         ! print *
+         ! print *
       end if
 
       ! Append received walkers
+      ! if (world_rank == 0) then
+      !    print *, num_walkers
+      !    do i = 1, num_walkers
+      !       call walkers(i)%print
+      !    end do
+      !    print *
+      !    print *
+      ! end if
       do i = 1, num_incoming
          walkers(num_walkers + i) = received_walkers(i)
       end do
+      num_walkers = num_walkers + num_incoming
+      ! if (world_rank == 0) then
+      !    print *, num_walkers
+      !    do i = 1, num_walkers
+      !       call walkers(i)%print
+      !    end do
+      !    print *
+      !    print *
+      ! end if
 
       call MPI_Barrier(MPI_COMM_WORLD, ierr)
       call MPI_Gather(num_walkers, 1, MPI_INTEGER, numbers, 1, MPI_INTEGER, 0, MPI_COMM_WORLD,ierr)
