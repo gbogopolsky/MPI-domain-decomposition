@@ -159,17 +159,16 @@ program domain_decomposition
 
       ! Delete outgoing walkers and redorder walkers array
       ip = 0
-      do i = 1, num_walkers
-         if (walkers(i)%id /= 0) then
-            ip = ip + 1
-            walkers(ip) = walkers(i)
-         end if
-      end do
       num_walkers = num_walkers - num_exchanged
+      do i = 1, num_walkers
+         do while (walkers(i + ip)%id == -1)
+            ip = ip + 1
+         end do
+         walkers(i) = walkers(i + ip)
+      end do
 
       ! Exchange walkers
       size = SIZEOF(walkers(1))
-      print *, "size", size
       if (world_rank == 0) then
          call MPI_Send(walker_exchange, num_exchanged * size, MPI_BYTE, 1, 0, MPI_COMM_WORLD, ierr)
 
