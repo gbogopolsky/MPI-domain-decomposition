@@ -124,7 +124,7 @@ program domain_decomposition
       ! Assign random step and walk
       do i = 1, num_walkers
          call RANDOM_NUMBER(rands)
-         rands = rands - 0.5
+         rands = (rands - 0.5) * 2                             ! -MAX_STEP <= rands <= MAX_STEP
          call walkers(i)%set_step(NINT(rands(1) * MAX_STEP), NINT(rands(2) * MAX_STEP))
          call walkers(i)%walk
       end do
