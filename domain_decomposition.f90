@@ -92,7 +92,7 @@ program domain_decomposition
    integer              :: numbers(2), incomings(2), exchanged(2)
 
    ! Common variables
-   integer              :: ierr, i, icycle, ip
+   integer              :: ierr, i, icycle, ip, id
    real, dimension(2)   :: rands
 
    call MPI_Init(ierr)
@@ -115,7 +115,8 @@ program domain_decomposition
    if (world_rank == 1) call RANDOM_SEED()
    do i = 1, num_walkers
       call RANDOM_NUMBER(rands)
-      call walkers(i)%initialize(i, NINT(rands(1) * subdomain_x), NINT(rands(2) * subdomain_y))
+      id = i + num_walkers * world_rank
+      call walkers(i)%initialize(id, NINT(rands(1) * subdomain_x), NINT(rands(2) * subdomain_y))
    end do
 
    ! Start cycle
