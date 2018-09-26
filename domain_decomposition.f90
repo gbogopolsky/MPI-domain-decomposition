@@ -12,6 +12,7 @@ module walker_mod
       procedure   :: initialize
       procedure   :: set_step
       procedure   :: walk
+      procedure   :: print
    end type
 
 contains
@@ -51,6 +52,13 @@ contains
       this%x = this%x + this%step_x
       this%y = this%y + this%step_y
 
+   end subroutine
+
+   subroutine print(this)
+      implicit none
+      class(Walker)  :: this
+      print '("id = ",I5,", x = ",I5,", y = ",I5,", step_x = ",I5,", step_y = ",I5)', &
+            this%id, this%x, this%y, this%step_x, this%step_y
    end subroutine
 
 end module
