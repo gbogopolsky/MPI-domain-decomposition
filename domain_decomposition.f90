@@ -73,7 +73,7 @@ program domain_decomposition
    integer, parameter   :: domain_y = 800
    integer, parameter   :: total_num_walkers = 10000
    integer, parameter   :: nCycles = 100000                    ! Number of cycles
-   integer, parameter   :: MAX_STEP = 20
+   integer, parameter   :: MAX_STEP = 50
    integer, parameter   :: MAX_EXCHANGE = 5000                 ! Size of exchange vector
    type(Walker)         :: walkers(total_num_walkers)
 
@@ -89,7 +89,7 @@ program domain_decomposition
    integer              :: size
    integer              :: size_incoming
    integer              :: status(MPI_STATUS_SIZE)
-   integer              :: numbers(2), incomings(2)
+   integer              :: numbers(2), incomings(2), exchanged(2)
 
    ! Common variables
    integer              :: ierr, i, icycle
@@ -131,12 +131,16 @@ program domain_decomposition
 
       ! Test if a walker is outside the domain on the periodic bounds.
       do i = 1, num_walkers
-         if (walkers(i)%y > subdomain_y) walkers(i)%y = walkers(i)%y - subdomain_y
-         if (walkers(i)%y < 1) walkers(i)%y = walkers(i)%y + subdomain_y
+         if (walkers(i)%y > subdomain_y) then
+            walkers(i)%y = walkers(i)%y - subdomain_y
+         end if
+         if (walkers(i)%y < 0) then
+            walkers(i)%y = walkers(i)%y + subdomain_y
+         end if
          ! Add walkers to the exchange arrays.
          if (world_rank == 0) then
             num_exchanged = 0
-            if (walkers(i)%x < 1 .OR. walkers(i)%x > subdomain_x) then
+            if (walkers(i)%x < 0 .OR. walkers(i)%x > subdomain_x) then
                walker_exchange(num_exchanged) = walkers(i)
                num_exchanged = num_exchanged + 1
                walkers(i)%id = 0                               ! id = 0 are set for deletion
@@ -144,13 +148,16 @@ program domain_decomposition
          end if
          if (world_rank == 1) then
             num_exchanged = 0
-            if (walkers(i)%x < 1 .OR. walkers(i)%x > subdomain_x) then
+            if (walkers(i)%x < 0 .OR. walkers(i)%x > subdomain_x) then
                walker_exchange(num_exchanged) = walkers(i)
                num_exchanged = num_exchanged + 1
                walkers(i)%id = 0
             end if
          end if
       end do
+      call MPI_Barrier(MPI_COMM_WORLD, ierr)
+      call MPI_Gather(num_exchanged, 1, MPI_INTEGER, exchanged, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
+      print *,"Exchanged walkers:", exchanged
 
       ! Delete outgoing walkers and redorder walkers array
       do i = 1, num_walkers
