@@ -130,6 +130,7 @@ program domain_decomposition
       end do
 
       ! Test if a walker is outside the domain on the periodic bounds.
+      num_exchanged = 0
       do i = 1, num_walkers
          if (walkers(i)%y > subdomain_y) then
             walkers(i)%y = walkers(i)%y - subdomain_y
@@ -137,7 +138,6 @@ program domain_decomposition
             walkers(i)%y = walkers(i)%y + subdomain_y
          end if
          ! Add walkers to the exchange arrays.
-         num_exchanged = 0
          if (walkers(i)%x < 0) then
             walkers(i)%x = walkers(i)%x + subdomain_x
             walker_exchange(num_exchanged) = walkers(i)
@@ -152,7 +152,9 @@ program domain_decomposition
       end do
       call MPI_Barrier(MPI_COMM_WORLD, ierr)
       call MPI_Gather(num_exchanged, 1, MPI_INTEGER, exchanged, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
-      print *,"Exchanged walkers:", exchanged
+      if (world_rank == 0) then
+         print *,"Exchanged walkers:", exchanged
+      end if
 
       ! Delete outgoing walkers and redorder walkers array
       do i = 1, num_walkers
