@@ -69,12 +69,12 @@ program domain_decomposition
    implicit none
 
    ! Global parameters
-   integer, parameter   :: domain_x = 500
-   integer, parameter   :: domain_y = 800
-   integer, parameter   :: total_num_walkers = 10000
-   integer, parameter   :: nCycles = 2000                   ! Number of cycles
-   integer, parameter   :: MAX_STEP = 50
-   integer, parameter   :: MAX_EXCHANGE = 5000                 ! Size of exchange vector
+   integer, parameter   :: domain_x = 20
+   integer, parameter   :: domain_y = 50
+   integer, parameter   :: total_num_walkers = 100
+   integer, parameter   :: nCycles = 1                   ! Number of cycles
+   integer, parameter   :: MAX_STEP = 5
+   integer, parameter   :: MAX_EXCHANGE = 50                 ! Size of exchange vector
    type(Walker)         :: walkers(total_num_walkers)
 
    ! Runtime variables for decomposition
@@ -91,8 +91,12 @@ program domain_decomposition
    integer              :: status(MPI_STATUS_SIZE)
    integer              :: numbers(2), incomings(2), exchanged(2)
 
+   ! Diagnostics and output
+   integer, dimension(domain_x, domain_y) :: walkersOnDomain
+   integer, dimension(:,:), allocatable   :: walkersOnSubdomain
+
    ! Common variables
-   integer              :: ierr, i, icycle, ip, id
+   integer              :: ierr, i, j, icycle, ip, id
    real, dimension(2)   :: rands
 
    call MPI_Init(ierr)
@@ -241,12 +245,18 @@ program domain_decomposition
       ! end if
 
       call MPI_Barrier(MPI_COMM_WORLD, ierr)
-      call MPI_Gather(num_walkers, 1, MPI_INTEGER, numbers, 1, MPI_INTEGER, 0, MPI_COMM_WORLD,ierr)
-      call MPI_Gather(num_incoming, 1, MPI_INTEGER, incomings, 1, MPI_INTEGER, 0, MPI_COMM_WORLD,ierr)
+      call MPI_Gather(num_walkers, 1, MPI_INTEGER, numbers, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
+      call MPI_Gather(num_incoming, 1, MPI_INTEGER, incomings, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
       if (world_rank == 0) then
          print *,"Number of walkers per domain:", numbers, "Total = ", SUM(numbers)
          print *,"Incoming in each domain:", incomings
       end if
+
+      allocate(walkersOnSubdomain(0:subdomain_x, 0:subdomain_y))
+      do i = 1, num_walkers
+         walkersOnSubdomain(walkers(i)%y, walkers(i)%x) = walkersOnSubdomain(walkers(i)%y, walkers(i)%x) + 1
+      end do
+      deallocate(walkersOnSubdomain)
    end do
    call MPI_Finalize(ierr)
 end program
